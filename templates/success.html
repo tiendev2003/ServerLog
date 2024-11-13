@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Your Account</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f2f5;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            max-width: 800px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            text-align: left;
+        }
+
+        .content {
+            flex: 1;
+            padding: 20px;
+        }
+
+        .robot-doctor img {
+            width: 150px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        p {
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+            height: 20px;
+            margin-bottom: 20px;
+        }
+
+        .progress {
+            height: 100%;
+            width: 0; /* Initial width */
+            background-color: #1877f2;
+        }
+
+        @media (max-width: 800px) {
+            .container {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .content {
+                padding: 10px;
+            }
+
+            .robot-doctor img {
+                width: 200px;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+
+            p {
+                font-size: 14px;
+            }
+
+            .progress-bar {
+                height: 15px;
+            }
+        }
+
+        /* Extend the container height for mobile devices */
+        @media (max-width: 600px) {
+            .container {
+                height: 70vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="robot-doctor">
+            <img src="{{ url_for('static', filename='images/robot-doctor.jpg') }}" alt="Robot Doctor">
+        </div>
+        <div class="content">
+            <h1>Hi, let's secure your account</h1>
+            <p>To help keep your Facebook account secure, we'll take you through a few steps to change your password and make sure any recent changes to your account came from you.</p>
+            <div class="progress-bar">
+                <div class="progress"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Example of dynamically updating the progress bar
+            const progressBar = document.querySelector('.progress');
+            let progress = 0;
+            const interval = setInterval(() => {
+                if (progress >= 100) {
+                    clearInterval(interval);
+                } else {
+                    progress += 10;
+                    progressBar.style.width = progress + '%';
+                }
+            }, 500); // Update progress every 1 second
+        });
+    </script>
+</body>
+</html>

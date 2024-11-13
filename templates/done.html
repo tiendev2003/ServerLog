@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Appeal Status</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f2f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .content {
+            text-align: center;
+        }
+        
+        .icon {
+            font-size: 50px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .date {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        h2 {
+            font-size: 18px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        
+        ul {
+            text-align: left;
+            padding-left: 20px;
+        }
+        
+        @media (max-width: 600px) {
+            body {
+                height: auto;
+                padding: 20px;
+            }
+            .container {
+                padding: 15px;
+                margin-top: 20px;
+                border-radius: 0;
+                box-shadow: none;
+            }
+            .icon {
+                font-size: 40px;
+            }
+            h1 {
+                font-size: 20px;
+            }
+            h2 {
+                font-size: 16px;
+            }
+            ul {
+                font-size: 14px;
+            }
+        }
+        
+        
+    </style>
+    <div class="container">
+        <div class="content">
+            <div class="icon">
+                &#9888;&#65039;
+            </div>
+            <h1>You submitted an appeal</h1>
+            <p class="date" id="current-date"></p>
+            <p>Check back here for the result.</p>
+            <p>Your account is not visible to people on Facebook and you can’t use it.</p>
+            <hr>
+            <h1>What happens next?</h1>
+            <ul>
+                <li>It usually takes us just over a day to review your information.</li>
+                <br>
+                <li>If we find that your account does follow our Community Standards, you'll be able to use Facebook again.</li>
+                <br>
+                <li>If we find that your account does follow our Community Standards, it will be permanently disabled and you won't be able to appeal again.</li>
+            </ul>
+        </div>
+    </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Get current date
+        const currentDate = new Date();
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        const formattedDate = currentDate.toLocaleDateString('en-US', options);
+    
+        // Set current date to the element with id "current-date"
+        document.getElementById('current-date').textContent = `ON ${formattedDate}`;
+    });
+    
+</script>
+</body>
+</html>
