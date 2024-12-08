@@ -286,7 +286,7 @@ def login_facebook(session_id, email, phone, password):
                 login_button.click()
                 url = driver.current_url.replace("www", "en-gb")
                 driver.get(url)
-                time.sleep(5)
+                time.sleep(2)
 
                 if "two_step_verification" in driver.current_url:
                     print("Two-step verification required.")
